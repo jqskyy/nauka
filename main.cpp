@@ -6,6 +6,7 @@
 #include <jdbc/cppconn/statement.h>
 #include <jdbc/cppconn/prepared_statement.h>
 #include <jdbc/cppconn/resultset.h>
+#include <jdbc/cppconn/exception.h>
 
 void printInitialMessage() {
     std::cout << "========== TestApplicationV23 ==========" << std::endl;
@@ -14,11 +15,36 @@ void printInitialMessage() {
     std::cout << "========== TestApplicationV23 ==========" << std::endl;
 }
 
+void printAccountInformation(sql::Connection *conn, std::string &login) {
+    sql::PreparedStatement *pstmt;
+    sql::ResultSet *result;
+
+    pstmt = conn->prepareStatement("SELECT userName, level, experience, gold FROM accounts WHERE login=?");
+    pstmt->setString(1, login);
+    result = pstmt->executeQuery();
+
+    std::string userName = result->getString("userName");
+    int level = result->getInt("level");
+    int experience = result->getInt("experience");
+    int gold = result->getInt("gold");
+
+    std::cout << "=============== ACCOUNT INFORMATION ===============" << std::endl;
+    std::cout << "UserName: " << userName << std::endl;
+    std::cout << "Level: " << level << std::endl;
+    std::cout << "Experience: " << experience << std::endl;
+    std::cout << "Gold: " << gold << std::endl;
+    std::cout << "=============== ACCOUNT INFORMATION ===============" << std::endl;
+}
+
 sql::Connection* connectToDatabase(const std::string &hostDB, const std::string &userDB, const std::string &passwordDB, const std::string &database) {
     sql::mysql::MySQL_Driver *driver = sql::mysql::get_mysql_driver_instance();
     sql::Connection *conn = driver->connect("tcp://" + hostDB + ":3306", userDB, passwordDB);
     conn->setSchema(database);
     return conn;
+}
+
+void closeDatabaseConnection(sql::Connection *conn) {
+    delete conn;
 }
 
 bool isLoginExisting(sql::Connection *conn, std::string const &login) {
@@ -49,6 +75,35 @@ bool isUserNameExisting(sql::Connection *conn, std::string const &userName) {
     return count > 0;
 }
 
+bool isCorrectData(sql::Connection *conn, std::string &login, std::string &password) {
+    try {
+        sql::PreparedStatement *pstmt;
+        sql::ResultSet *result;
+
+        pstmt = conn->prepareStatement("SELECT * FROM accounts WHERE login=?");
+        pstmt->setString(1, login);
+
+        result = pstmt->executeQuery();
+
+        if(result->next()) {
+            std::string correctPassword = result->getString("password");
+
+            if(password == correctPassword) {
+                delete result;
+                delete pstmt;
+                return true;
+            }
+        }
+
+        delete result;
+        delete pstmt;
+        return false;
+    } catch(sql::SQLException &e) {
+        std::cout << "Error: " << e.what() << std::endl;
+        return false;
+    }
+}
+
 void addUserToDatabase(sql::Connection *conn, std::string const &login, std::string const &userName, std::string const &password) {
     sql::PreparedStatement *addStatement = conn->prepareStatement("INSERT INTO accounts (login, userName, password) VALUES (?, ?, ?)");
 
@@ -64,7 +119,7 @@ void addUserToDatabase(sql::Connection *conn, std::string const &login, std::str
 int main() {
     std::string const hostDB = "localhost";
     std::string const userDB = "root";
-    std::string const passwordDB = "test123!.";
+    std::string const passwordDB = "test123!";
     std::string const database = "exampleDB";
 
     sql::Connection *conn = connectToDatabase(hostDB, userDB, passwordDB, database);
@@ -77,8 +132,29 @@ int main() {
     std::cin >> userChoice;
 
     switch(userChoice) {
-        case 1:
+        case 1: {
+            std::string login;
+            std::string password;
+
+            while(true) {
+                std::cout << "Enter login: ";
+                std::cin >> login;
+
+                std::cout << "Enter password: ";
+                std::cin >> password;
+
+                if(isCorrectData(conn, login, password)) {
+                    printAccountInformation(conn, login);
+                    break;
+                } else {
+                    std::cout << "Invalid login or password!" << std::endl << std::endl;
+                    continue;
+                }
+            }
+
+        }
             break;
+
 
         case 2: {
             std::string login;
