@@ -1,17 +1,18 @@
 #include <iostream>
 #include <string>
-#include <map>
 #include <jdbc/mysql_driver.h>
 #include <jdbc/mysql_connection.h>
 #include <jdbc/cppconn/statement.h>
 #include <jdbc/cppconn/prepared_statement.h>
 #include <jdbc/cppconn/resultset.h>
 #include <jdbc/cppconn/exception.h>
+#include <mysqlx/xdevapi.h>
 
 void printInitialMessage() {
     std::cout << "========== TestApplicationV23 ==========" << std::endl;
     std::cout << "[1] - Login" << std::endl;
     std::cout << "[2] - Register" << std::endl;
+    std::cout << "[3] - Exit" << std::endl;
     std::cout << "========== TestApplicationV23 ==========" << std::endl;
 }
 
@@ -119,7 +120,7 @@ void addUserToDatabase(sql::Connection *conn, std::string const &login, std::str
 int main() {
     std::string const hostDB = "localhost";
     std::string const userDB = "root";
-    std::string const passwordDB = "test123!";
+    std::string const passwordDB = "test123!.";
     std::string const database = "exampleDB";
 
     sql::Connection *conn = connectToDatabase(hostDB, userDB, passwordDB, database);
@@ -128,7 +129,7 @@ int main() {
 
     int userChoice;
 
-    std::cout << "Select an option [1-2]: ";
+    std::cout << "Select an option [1-3]: ";
     std::cin >> userChoice;
 
     switch(userChoice) {
@@ -196,6 +197,10 @@ int main() {
 
         }
             break;
+
+        case 3:
+            closeDatabaseConnection(conn);
+            return 0;
 
         default:
             std::cout << "Invalid Value!" << std::endl;
